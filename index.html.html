@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عطور الساهر - بطاقة الولاء</title>
+    <!-- استدعاء مكتبة قراءة الباركود jsQR -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --gold: #D4AF37;
+            --gold-light: #f3e5ab;
+            --text-color: #ffffff;
+            --text-muted: #8b949e;
+            --border-color: #30363d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 420px;
+            background: var(--card-bg);
+            border: 2px solid var(--gold);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15);
+            text-align: center;
+        }
+        .header h1 { color: var(--gold); font-size: 26px; margin-bottom: 5px; }
+        .header p { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+        .stamp-card {
+            background: #0a0e14;
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .stamp-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .stamp-box {
+            aspect-ratio: 1;
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            color: var(--text-muted);
+            background: #121821;
+        }
+        .stamp-box.filled {
+            border: 2px solid var(--gold);
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--gold);
+            font-weight: bold;
+            box-shadow: 0 0 12px rgba(212, 175, 55, 0.3);
+        }
+        .counter-text { font-size: 16px; color: var(--text-color); margin-top: 10px; }
+        .counter-text span { color: var(--gold); font-weight: bold; }
+        .reward-banner {
+            background: linear-gradient(135deg, #231f10, #3a2e04);
+            border: 1px solid var(--gold);
+            color: var(--gold-light);
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+        .reward-banner.active { display: block; }
+        .action-btn {
+            background: linear-gradient(135deg, #D4AF37, #aa8c2c);
+            color: #000;
+            border: none;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+        }
+        /* نافذة الكاميرا المنبثقة */
+        #scanner-container {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #scanner-container video {
+            width: 90%;
+            max-width: 350px;
+            border-radius: 15px;
+            border: 2px solid var(--gold);
+        }
+        .close-scanner {
+            background: #ff4d4d;
+            color: #white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .footer-note { font-size: 12px; color: var(--text-muted); margin-top: 20px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>عطور الساهر</h1>
+            <p>بطاقة الولاء الإلكترونية</p>
+        </div>
+
+        <div class="stamp-card">
+            <div class="stamp-grid" id="stampGrid"></div>
+            <div class="counter-text">
+                الأختام المجمعة: <span id="stampCount">0</span> من 6
+            </div>
+            <div class="reward-banner" id="rewardBanner">
+                🎉 مبروك! لقد أكملت 6 أختام. توجه إلى المحل لتستلم عطرك المجاني!
+            </div>
+        </div>
+
+        <!-- زر فتح الكاميرا لمسح باركود المحل -->
+        <button class="action-btn" onclick="startScanner()">مسح الـ QR لإضافة ختم</button>
+
+        <div class="footer-note">
+            البيانات محمية على جهازك. لا يمكن إعادة استخدام نفس الباركود مرتين.
+        </div>
+    </div>
+
+    <!-- واجهة الكاميرا -->
+    <div id="scanner-container">
+        <video id="video" muted playsinline></video>
+        <p style="color: #fff; margin-top: 15px; font-size: 14px;">وجه الكاميرا نحو باركود عطور الساهر بالمحل...</p>
+        <button class="close-scanner" onclick="stopScanner()">إلغاء</button>
+    </div>
+
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <script>
+        let stamps = parseInt(localStorage.getItem('alsaher_stamps')) || 0;
+        let lastUsedToken = localStorage.getItem('alsaher_last_token') || "";
+        
+        let videoStream = null;
+        const video = document.getElementById('video');
+        const canvasElement = document.getElementById('canvas');
+        const canvas = canvasElement.getContext('2d');
+        const scannerContainer = document.getElementById('scanner-container');
+
+        function renderStamps() {
+            const grid = document.getElementById('stampGrid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 6; i++) {
+                const box = document.createElement('div');
+                box.className = `stamp-box ${i <= stamps ? 'filled' : ''}`;
+                box.innerHTML = i <= stamps ? '⭐' : i;
+                grid.appendChild(box);
+            }
+            document.getElementById('stampCount').innerText = stamps;
+            
+            const banner = document.getElementById('rewardBanner');
+            if (stamps >= 6) {
+                banner.classList.add('active');
+            } else {
+                banner.classList.remove('active');
+            }
+        }
+
+        function startScanner() {
+            if (stamps >= 6) {
+                if(confirm('لقد أتممت الختم السادس وحصلت على هديتك. هل تريد بدء دورة جديدة وتصفير البطاقة؟')) {
+                    stamps = 0;
+                    localStorage.setItem('alsaher_stamps', stamps);
+                    localStorage.removeItem('alsaher_last_token');
+                    renderStamps();
+                }
+                return;
+            }
+
+            scannerContainer.style.display = 'flex';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(stream => {
+                    videoStream = stream;
+                    video.srcObject = stream;
+                    video.setAttribute("playsinline", true);
+                    video.play();
+                    requestAnimationFrame(tick);
+                })
+                .catch(err => {
+                    alert("تعذر الوصول إلى الكاميرا. تأكد من إعطاء الصلاحية أو استخدام HTTPS.");
+                    stopScanner();
+                });
+        }
+
+        function stopScanner() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+            scannerContainer.style.display = 'none';
+        }
+
+        function tick() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvasElement.height = video.videoHeight;
+                canvasElement.width = video.videoWidth;
+                canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                var code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+
+                if (code) {
+                    verifyAndAddStamp(code.data);
+                    return;
+                }
+            }
+            if (scannerContainer.style.display === 'flex') {
+                requestAnimationFrame(tick);
+            }
+        }
+
+        function verifyAndAddStamp(scannedText) {
+            // التحقق من امتداد المحل الأساسي (يجب أن يبدأ بـ ALSAHER_STAMP_)
+            if (!scannedText.startsWith("ALSAHER_STAMP_")) {
+                alert("❌ هذا الرمز غير تابع لمحل عطور الساهر!");
+                stopScanner();
+                return;
+            }
+
+            // التحقق من عدم تكرار نفس الباركود لمنع التلاعب
+            if (scannedText === lastUsedToken) {
+                alert("⚠️ تنبيه أمني: هذا الباركود تم استخدمه من قبل ولا يمكن إعادته!");
+                stopScanner();
+                return;
+            }
+
+            // إذا كلشي سليم، أضف الختم واقفل الكاميرا وافظ الباركود كـ مستخدم
+            stamps++;
+            localStorage.setItem('alsaher_stamps', stamps);
+            localStorage.setItem('alsaher_last_token', scannedText);
+            lastUsedToken = scannedText;
+            
+            stopScanner();
+            renderStamps();
+            alert("✨ مبروك! تم إضافة الختم بنجاح إلى بطاقتك.");
+        }
+
+        renderStamps();
+    </script>
+</body>
+</html>
